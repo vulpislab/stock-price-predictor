@@ -9,6 +9,21 @@ const getDefaultPythonApiUrl = () => {
   return `${origin}/_/backend`;
 };
 
+const resolvePythonApiBase = () => {
+  const configured = (import.meta.env.VITE_PYTHON_API_URL || '').trim();
+  if (typeof window === 'undefined') return configured || DEFAULT_PYTHON_API_URL;
+
+  const { hostname } = window.location;
+  const isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1';
+  const pointsToLocal =
+    configured.includes('127.0.0.1') || configured.includes('localhost');
+
+  if (!configured) return getDefaultPythonApiUrl();
+  if (!isLocalHost && pointsToLocal) return getDefaultPythonApiUrl();
+
+  return configured;
+};
+
 const getErrorMessage = (payload, status) => {
   if (!payload) return `Python forecast API returned HTTP ${status}.`;
   if (typeof payload === 'string') return payload;
@@ -21,13 +36,20 @@ const getErrorMessage = (payload, status) => {
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+const resolveModelProfile = () => {
+  const configured = (import.meta.env.VITE_PYTHON_MODEL_PROFILE || 'auto').toLowerCase();
+  if (configured === 'light' || configured === 'full') return configured;
+  return 'auto';
+};
+
 export const fetchPythonForecast = async ({ ticker, horizon, series }) => {
-  const apiBase = import.meta.env.VITE_PYTHON_API_URL || getDefaultPythonApiUrl();
+  const apiBase = resolvePythonApiBase();
   const payload = {
     ticker: ticker.trim().toUpperCase(),
     horizon,
     dates: series.map((point) => point.date),
-    closes: series.map((point) => point.close)
+    closes: series.map((point) => point.close),
+    model_profile: resolveModelProfile()
   };
 
   let lastError = null;

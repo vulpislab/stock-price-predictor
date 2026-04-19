@@ -15,6 +15,21 @@ const getDefaultBackendApiUrl = () => {
   return `${origin}/_/backend`;
 };
 
+const resolveBackendApiBase = () => {
+  const configured = (import.meta.env.VITE_BACKEND_API_URL || '').trim();
+  if (typeof window === 'undefined') return configured || DEFAULT_BACKEND_API_URL;
+
+  const { hostname } = window.location;
+  const isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1';
+  const pointsToLocal =
+    configured.includes('127.0.0.1') || configured.includes('localhost');
+
+  if (!configured) return getDefaultBackendApiUrl();
+  if (!isLocalHost && pointsToLocal) return getDefaultBackendApiUrl();
+
+  return configured;
+};
+
 const getStorage = () => {
   if (typeof window === 'undefined') return null;
   return window.localStorage;
@@ -118,7 +133,7 @@ export const fetchIndianStockSeries = async (ticker) => {
     return buildSyntheticFallback(symbol, buildQuotaWarning(), { forceQuotaLimit: true });
   }
 
-  const backendApiBase = import.meta.env.VITE_BACKEND_API_URL || getDefaultBackendApiUrl();
+  const backendApiBase = resolveBackendApiBase();
   const requestUrl = `${backendApiBase}/market-data?ticker=${encodeURIComponent(symbol)}&outputsize=220`;
 
   let response;

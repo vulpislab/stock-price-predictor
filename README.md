@@ -44,6 +44,7 @@ stock-price-predictor/
    ```env
    VITE_BACKEND_API_URL=http://127.0.0.1:8000
    VITE_PYTHON_API_URL=http://127.0.0.1:8000
+   VITE_PYTHON_MODEL_PROFILE=auto
    ```
 4. Start frontend:
    ```bash
@@ -68,6 +69,7 @@ stock-price-predictor/
    ```bash
    set EODHD_API_KEY=your_real_eodhd_key
    set ALLOWED_ORIGINS=http://127.0.0.1:5173,http://localhost:5173
+   set PYTHON_MODEL_PROFILE=auto
    uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
    ```
 5. Health check:
@@ -86,3 +88,18 @@ stock-price-predictor/
 - Forecast output is for educational/demo purposes, not investment advice.
 - No database is required for this version.
 - EODHD API key is now backend-only (`EODHD_API_KEY`) and is not exposed in browser code.
+- `RandomForestRegressor` is always used. In `auto` mode, backend can switch to a lighter RF profile for better free-tier latency.
+
+## Free Share Hack (No Render/Fly/Paid Vercel)
+You can run both services locally and share one public URL with a free tunnel:
+1. Start backend on `127.0.0.1:8000`.
+2. Keep frontend env in `.env` as:
+   - `VITE_BACKEND_API_URL=/_/backend`
+   - `VITE_PYTHON_API_URL=/_/backend`
+   - `VITE_PYTHON_MODEL_PROFILE=light` (optional for weaker machines/free usage)
+3. Start frontend (`npm run dev`). Vite already proxies `/_/backend` -> `http://127.0.0.1:8000`.
+4. Open a tunnel only for frontend (example):
+   - `cloudflared tunnel --url http://127.0.0.1:5173`
+5. Share the public tunnel URL to students.
+
+This avoids paid hosting, keeps the real RandomForest model, and still falls back to synthetic/client-side projection when live services fail.

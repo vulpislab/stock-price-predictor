@@ -33,6 +33,7 @@ class ForecastRequest(BaseModel):
     horizon: int = Field(default=7, ge=3, le=30)
     dates: list[str]
     closes: list[float]
+    model_profile: str | None = Field(default=None)
 
 
 class ForecastMetrics(BaseModel):
@@ -142,6 +143,56 @@ def compute_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> ForecastMetrics:
     return ForecastMetrics(mae=round(mae, 4), rmse=round(rmse, 4), mape=round(mape, 4))
 
 
+def parse_positive_int_env(name: str, default: int) -> int:
+    raw = os.getenv(name, "").strip()
+    if not raw:
+        return default
+    try:
+        parsed = int(raw)
+    except ValueError:
+        return default
+    return parsed if parsed > 0 else default
+
+
+def resolve_model_profile(request_profile: str | None, training_rows: int) -> tuple[str, dict[str, int]]:
+    valid_profiles = {"auto", "light", "full"}
+    configured_profile = os.getenv("PYTHON_MODEL_PROFILE", "auto").strip().lower() or "auto"
+    requested_profile = (request_profile or "").strip().lower()
+    selected_profile = requested_profile or configured_profile
+    if selected_profile not in valid_profiles:
+        selected_profile = "auto"
+
+    auto_light_threshold = parse_positive_int_env("PYTHON_MODEL_AUTO_LIGHT_THRESHOLD", 140)
+    is_serverless = bool(os.getenv("VERCEL")) or bool(os.getenv("AWS_REGION")) or bool(os.getenv("RAILWAY_ENVIRONMENT"))
+
+    effective_profile = selected_profile
+    if selected_profile == "auto":
+        effective_profile = "light" if is_serverless or training_rows >= auto_light_threshold else "full"
+
+    if effective_profile == "light":
+        return (
+            "light",
+            {
+                "n_estimators": 80,
+                "max_depth": 7,
+                "min_samples_leaf": 3,
+                "random_state": 42,
+                "n_jobs": 1,
+            },
+        )
+
+    return (
+        "full",
+        {
+            "n_estimators": 180,
+            "max_depth": 10,
+            "min_samples_leaf": 2,
+            "random_state": 42,
+            "n_jobs": 1,
+        },
+    )
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
@@ -244,13 +295,8 @@ def forecast_prices(request: ForecastRequest) -> ForecastResponse:
     x_train, x_test = x[:-test_size], x[-test_size:]
     y_train, y_test = y[:-test_size], y[-test_size:]
 
-    model = RandomForestRegressor(
-        n_estimators=180,
-        max_depth=10,
-        min_samples_leaf=2,
-        random_state=42,
-        n_jobs=1,
-    )
+    model_profile, model_params = resolve_model_profile(request.model_profile, len(train_frame))
+    model = RandomForestRegressor(**model_params)
     model.fit(x_train, y_train)
 
     y_pred_test = model.predict(x_test)
@@ -284,7 +330,7 @@ def forecast_prices(request: ForecastRequest) -> ForecastResponse:
     return ForecastResponse(
         ticker=request.ticker.strip().upper(),
         horizon=request.horizon,
-        model_name="RandomForestRegressor",
+        model_name=f"RandomForestRegressor ({model_profile})",
         metrics=metrics,
         projected_dates=next_trading_dates(parse_last_date(request.dates), request.horizon),
         projected_closes=projected_closes,
