@@ -1,10 +1,19 @@
 import { generateSyntheticSeries } from '../utils/syntheticSeries';
 
-const API_BASE = 'https://eodhd.com/api/eod';
+const DEFAULT_BACKEND_API_URL = 'http://127.0.0.1:8000';
 const LOCAL_FREE_REQUEST_LIMIT = 100;
 const USAGE_STORAGE_KEY = 'eodhd_daily_usage_v1';
 
 const todayKey = () => new Date().toISOString().slice(0, 10);
+
+const getDefaultBackendApiUrl = () => {
+  if (typeof window === 'undefined') return DEFAULT_BACKEND_API_URL;
+  const { hostname, origin } = window.location;
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return DEFAULT_BACKEND_API_URL;
+  }
+  return `${origin}/_/backend`;
+};
 
 const getStorage = () => {
   if (typeof window === 'undefined') return null;
@@ -45,7 +54,7 @@ const extractApiMessage = (payload) => {
   if (!payload) return '';
   if (typeof payload === 'string') return payload;
   if (Array.isArray(payload)) return '';
-  return payload.message || payload.error || payload.status || '';
+  return payload.detail || payload.message || payload.error || payload.status || '';
 };
 
 const isQuotaError = (status, message) => {
@@ -66,7 +75,7 @@ const buildQuotaWarning = (providerMessage = '') =>
   }. Showing synthetic data so charts and analysis stay available.`;
 
 const buildConnectivityWarning = (providerMessage = '') =>
-  `Failed to reach EODHD live servers right now${
+  `Failed to reach the live market-data service right now${
     providerMessage ? ` (${providerMessage})` : ''
   }. Showing synthetic data so charts and analysis stay available.`;
 
@@ -99,14 +108,9 @@ const buildSyntheticFallback = (symbol, warning, options = {}) => {
 const normalizeTicker = (ticker) => ticker.trim().toUpperCase();
 
 export const fetchIndianStockSeries = async (ticker) => {
-  const apiKey = import.meta.env.VITE_EODHD_API_KEY;
   const symbol = normalizeTicker(ticker);
   if (!/^[A-Z0-9]+$/.test(symbol)) {
     throw new Error('Use a valid NSE ticker (letters and numbers only).');
-  }
-
-  if (!apiKey) {
-    return buildSyntheticFallback(symbol, buildConfigWarning('Missing VITE_EODHD_API_KEY in .env'));
   }
 
   const usageBeforeRequest = readUsage();
@@ -114,22 +118,14 @@ export const fetchIndianStockSeries = async (ticker) => {
     return buildSyntheticFallback(symbol, buildQuotaWarning(), { forceQuotaLimit: true });
   }
 
-  const fromDate = new Date();
-  fromDate.setUTCDate(fromDate.getUTCDate() - 420);
-
-  const params = new URLSearchParams({
-    api_token: apiKey,
-    period: 'd',
-    order: 'a',
-    fmt: 'json',
-    from: fromDate.toISOString().slice(0, 10)
-  });
+  const backendApiBase = import.meta.env.VITE_BACKEND_API_URL || getDefaultBackendApiUrl();
+  const requestUrl = `${backendApiBase}/market-data?ticker=${encodeURIComponent(symbol)}&outputsize=220`;
 
   let response;
   try {
-    response = await fetch(`${API_BASE}/${symbol}.NSE?${params.toString()}`);
+    response = await fetch(requestUrl);
   } catch {
-    return buildSyntheticFallback(symbol, buildConnectivityWarning('Failed to reach EODHD. Please retry in a moment.'));
+    return buildSyntheticFallback(symbol, buildConnectivityWarning('Failed to reach backend service.'));
   }
 
   let payload;
@@ -146,46 +142,38 @@ export const fetchIndianStockSeries = async (ticker) => {
       writeUsage({ date: todayKey(), count: LOCAL_FREE_REQUEST_LIMIT });
       return buildSyntheticFallback(symbol, buildQuotaWarning(providerMessage), { forceQuotaLimit: true });
     }
-    if (response.status >= 500) {
-      return buildSyntheticFallback(
-        symbol,
-        buildConnectivityWarning(providerMessage || `HTTP ${response.status}`)
-      );
+
+    if (response.status === 503 || response.status >= 500) {
+      return buildSyntheticFallback(symbol, buildConnectivityWarning(providerMessage || `HTTP ${response.status}`));
     }
-    if ((providerMessage || '').toLowerCase().includes('api token') || (providerMessage || '').toLowerCase().includes('api key')) {
+
+    const lowerMessage = (providerMessage || '').toLowerCase();
+    if (
+      lowerMessage.includes('missing eodhd_api_key') ||
+      lowerMessage.includes('api token') ||
+      lowerMessage.includes('api key')
+    ) {
       return buildSyntheticFallback(symbol, buildConfigWarning(providerMessage));
     }
+
     return buildSyntheticFallback(symbol, buildProviderWarning(providerMessage || `HTTP ${response.status}`));
   }
 
-  if (!Array.isArray(payload)) {
-    if (isQuotaError(response.status, providerMessage)) {
-      writeUsage({ date: todayKey(), count: LOCAL_FREE_REQUEST_LIMIT });
-      return buildSyntheticFallback(symbol, buildQuotaWarning(providerMessage), { forceQuotaLimit: true });
-    }
-    return buildSyntheticFallback(symbol, buildProviderWarning(providerMessage || 'Unexpected response format'));
+  if (!Array.isArray(payload?.values)) {
+    return buildSyntheticFallback(symbol, buildProviderWarning('Unexpected response format from backend.'));
   }
 
-  if (!payload.length) {
+  if (!payload.values.length) {
     throw new Error('No market data found. Check ticker spelling and try again.');
   }
-
-  const normalizedValues = payload.map((point) => ({
-    datetime: point.date,
-    open: point.open,
-    high: point.high,
-    low: point.low,
-    close: point.close,
-    volume: point.volume ?? 0
-  }));
 
   const usageAfterRequest = incrementUsage();
 
   return {
-    values: normalizedValues,
+    values: payload.values,
     meta: {
       source: 'live',
-      provider: 'EODHD',
+      provider: payload.provider || 'Backend proxy',
       isSynthetic: false,
       warning: '',
       localQuotaUsed: usageAfterRequest.count,

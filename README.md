@@ -5,7 +5,7 @@ It combines a React dashboard, live/synthetic market data handling, and a Python
 
 ## Tech Stack
 - Frontend: React + Vite + TailwindCSS + Plotly
-- Data source: EODHD (NSE daily OHLCV)
+- Data source: EODHD via backend proxy endpoint (NSE daily OHLCV)
 - Prediction backend: FastAPI + pandas + scikit-learn (`RandomForestRegressor`)
 
 ## What It Does
@@ -42,7 +42,7 @@ stock-price-predictor/
    ```
 3. Set values in `.env`:
    ```env
-   VITE_EODHD_API_KEY=your_eodhd_api_key_here
+   VITE_BACKEND_API_URL=http://127.0.0.1:8000
    VITE_PYTHON_API_URL=http://127.0.0.1:8000
    ```
 4. Start frontend:
@@ -66,10 +66,13 @@ stock-price-predictor/
    ```
 4. Run API:
    ```bash
+   set EODHD_API_KEY=your_real_eodhd_key
+   set ALLOWED_ORIGINS=http://127.0.0.1:5173,http://localhost:5173
    uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
    ```
 5. Health check:
    - `GET http://127.0.0.1:8000/health`
+   - `GET http://127.0.0.1:8000/market-data?ticker=RELIANCE`
 
 ## Sample Tickers
 - RELIANCE
@@ -82,3 +85,4 @@ stock-price-predictor/
 ## Notes
 - Forecast output is for educational/demo purposes, not investment advice.
 - No database is required for this version.
+- EODHD API key is now backend-only (`EODHD_API_KEY`) and is not exposed in browser code.

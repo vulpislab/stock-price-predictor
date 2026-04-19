@@ -1,14 +1,20 @@
 from datetime import date, datetime, timedelta
 from math import sqrt
+import json
 import os
+import re
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
 
 import numpy as np
 import pandas as pd
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sklearn.ensemble import RandomForestRegressor
 
+EODHD_BASE_URL = "https://eodhd.com/api/eod"
 FEATURE_COLUMNS = [
     "lag_1",
     "lag_2",
@@ -44,6 +50,33 @@ class ForecastResponse(BaseModel):
     projected_closes: list[float]
     upper_band: list[float]
     lower_band: list[float]
+
+
+def extract_provider_message(payload: object) -> str:
+    if payload is None:
+        return ""
+    if isinstance(payload, str):
+        return payload
+    if isinstance(payload, dict):
+        return (
+            str(payload.get("message") or "")
+            or str(payload.get("error") or "")
+            or str(payload.get("status") or "")
+        )
+    return ""
+
+
+def is_quota_error(status_code: int, message: str) -> bool:
+    if status_code == 429:
+        return True
+    lower = (message or "").lower()
+    return (
+        "quota" in lower
+        or "limit" in lower
+        or "too many" in lower
+        or "exceeded" in lower
+        or "100 request" in lower
+    )
 
 
 app = FastAPI(title="Stock Predictor API", version="1.0.0")
@@ -112,6 +145,78 @@ def compute_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> ForecastMetrics:
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/market-data")
+def market_data(
+    ticker: str = Query(..., min_length=1, max_length=20),
+    outputsize: int = Query(220, ge=60, le=500),
+) -> dict[str, object]:
+    symbol = ticker.strip().upper()
+    if not re.fullmatch(r"[A-Z0-9]+", symbol):
+        raise HTTPException(status_code=400, detail="Use a valid NSE ticker (letters and numbers only).")
+
+    api_key = os.getenv("EODHD_API_KEY", "").strip()
+    if not api_key:
+        raise HTTPException(status_code=500, detail="Backend missing EODHD_API_KEY environment variable.")
+
+    from_date = (date.today() - timedelta(days=420)).isoformat()
+    params = urlencode(
+        {
+            "api_token": api_key,
+            "period": "d",
+            "order": "a",
+            "fmt": "json",
+            "from": from_date,
+        }
+    )
+    request_url = f"{EODHD_BASE_URL}/{symbol}.NSE?{params}"
+    request = Request(request_url, headers={"User-Agent": "stock-price-predictor-backend/1.0"})
+
+    try:
+        with urlopen(request, timeout=25) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except HTTPError as exc:
+        body_text = exc.read().decode("utf-8", errors="ignore")
+        payload = None
+        try:
+            payload = json.loads(body_text) if body_text else None
+        except json.JSONDecodeError:
+            payload = body_text
+        message = extract_provider_message(payload) or f"EODHD returned HTTP {exc.code}."
+        if is_quota_error(exc.code, message):
+            raise HTTPException(status_code=429, detail=message)
+        if exc.code in (400, 401, 403, 404):
+            raise HTTPException(status_code=exc.code, detail=message)
+        raise HTTPException(status_code=502, detail=message)
+    except URLError:
+        raise HTTPException(status_code=503, detail="Failed to reach EODHD.")
+    except Exception:
+        raise HTTPException(status_code=502, detail="Unexpected error while fetching market data from EODHD.")
+
+    if not isinstance(payload, list):
+        message = extract_provider_message(payload) or "Unexpected response format from EODHD."
+        if is_quota_error(200, message):
+            raise HTTPException(status_code=429, detail=message)
+        raise HTTPException(status_code=502, detail=message)
+
+    if not payload:
+        raise HTTPException(status_code=404, detail="No market data found. Check ticker spelling and try again.")
+
+    selected_points = payload[-outputsize:]
+    values = [
+        {
+            "datetime": point.get("date"),
+            "open": point.get("open"),
+            "high": point.get("high"),
+            "low": point.get("low"),
+            "close": point.get("close"),
+            "volume": point.get("volume") if point.get("volume") is not None else 0,
+        }
+        for point in selected_points
+    ]
+
+    return {"ticker": symbol, "provider": "EODHD (via backend)", "values": values}
 
 
 @app.post("/forecast", response_model=ForecastResponse)
