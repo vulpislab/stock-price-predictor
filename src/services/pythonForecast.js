@@ -1,5 +1,14 @@
 const DEFAULT_PYTHON_API_URL = 'http://127.0.0.1:8000';
 
+const getDefaultPythonApiUrl = () => {
+  if (typeof window === 'undefined') return DEFAULT_PYTHON_API_URL;
+  const { hostname, origin } = window.location;
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return DEFAULT_PYTHON_API_URL;
+  }
+  return `${origin}/_/backend`;
+};
+
 const getErrorMessage = (payload, status) => {
   if (!payload) return `Python forecast API returned HTTP ${status}.`;
   if (typeof payload === 'string') return payload;
@@ -11,7 +20,7 @@ const getErrorMessage = (payload, status) => {
 };
 
 export const fetchPythonForecast = async ({ ticker, horizon, series }) => {
-  const apiBase = import.meta.env.VITE_PYTHON_API_URL || DEFAULT_PYTHON_API_URL;
+  const apiBase = import.meta.env.VITE_PYTHON_API_URL || getDefaultPythonApiUrl();
   const payload = {
     ticker: ticker.trim().toUpperCase(),
     horizon,
