@@ -15,13 +15,13 @@ function TickerInputPanel({
       <div className="mb-6 flex items-center justify-between gap-4">
         <div>
           <h2 className="section-heading">Analyze Indian Stock Data</h2>
-          <p className="section-subtext">Enter an NSE ticker and build charts, indicators, and a learning-based projection.</p>
+          <p className="section-subtext">Enter an NSE ticker and generate charts, indicators, and Python model-based forecasts.</p>
         </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <label className="flex flex-col gap-2">
-          <span className="text-sm font-medium text-slate-200">Ticker Symbol (XNSE)</span>
+          <span className="text-sm font-medium text-slate-200">Ticker Symbol (NSE)</span>
           <input
             value={ticker}
             onChange={(event) => onTickerChange(event.target.value.toUpperCase())}

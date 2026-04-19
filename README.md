@@ -1,59 +1,77 @@
 # Stock Price Predictor
 
-Stock Price Predictor is a premium, teaching-first frontend project built to demonstrate polished product thinking and recruiter-grade implementation quality. It lets users analyze real NSE stock history using Twelve Data and explore transparent educational prediction logic.
-
-## Project Overview
-This app is designed to feel like a modern fintech SaaS demo while remaining educational and honest about modeling limits.
-
-### Problem Statement
-Most tutorial stock dashboards either look unfinished or overclaim machine-learning capability. Stock Price Predictor solves that by combining:
-- real market data
-- clear indicator logic
-- premium visual design
-- explicit educational framing
-
-## What the App Teaches
-- Time series analysis basics through real OHLCV data
-- Trend detection using moving-average interpretation
-- Volatility interpretation using rolling returns
-- How educational projections differ from deployable quantitative models
-- What LSTM means conceptually and why this app does not fake deep-learning inference in-browser
-
-## Recruiter Evaluation Lens
-Recruiters can evaluate this project for:
-- API integration quality and error handling
-- Data normalization and transformation approach
-- Plotly chart composition and responsive UX
-- Indicator engineering in JavaScript (SMA, returns, rolling volatility, trend)
-- Product copywriting, design polish, and information architecture
-- Clear communication of model limitations and roadmap readiness
+Stock Price Predictor is a teaching-first full-stack project for NSE analytics and forecasting.
+It combines a React dashboard, live/synthetic market data handling, and a Python ML prediction API.
 
 ## Tech Stack
-- React + Vite
-- TailwindCSS
-- JavaScript (no TypeScript)
-- Plotly charts (`react-plotly.js` + `plotly.js-dist-min`)
-- Twelve Data API (daily series, XNSE)
+- Frontend: React + Vite + TailwindCSS + Plotly
+- Data source: EODHD (NSE daily OHLCV)
+- Prediction backend: FastAPI + pandas + scikit-learn (`RandomForestRegressor`)
 
-## Setup
-1. Install dependencies:
+## What It Does
+- Loads NSE historical candles and volume
+- Computes indicators (SMA, returns, annualized volatility, trend)
+- Renders interactive candlestick, trend, volume, and forecast charts
+- Trains a Python model per request and returns:
+  - forecasted prices
+  - confidence bands
+  - MAE / RMSE / MAPE metrics
+- Uses synthetic fallback data when live API quota/connectivity fails so charts remain usable
+- Uses heuristic projection fallback when Python API is unavailable
+
+## Project Structure
+```text
+stock-price-predictor/
+  backend/
+    app/main.py
+    requirements.txt
+  src/
+    components/
+    services/
+    utils/
+```
+
+## Frontend Setup
+1. Install packages:
    ```bash
    npm install
    ```
-2. Create `.env` from the example and set your key:
+2. Create env file:
    ```bash
    cp .env.example .env
    ```
-3. Add your Twelve Data key:
+3. Set values in `.env`:
    ```env
-   VITE_TWELVE_DATA_API_KEY=your_actual_key
+   VITE_EODHD_API_KEY=your_eodhd_api_key_here
+   VITE_PYTHON_API_URL=http://127.0.0.1:8000
    ```
-4. Run locally:
+4. Start frontend:
    ```bash
-   npm run dev
+   npm run dev -- --host 127.0.0.1 --port 5173
    ```
 
-## Sample NSE Tickers
+## Python Backend Setup
+1. Move into backend:
+   ```bash
+   cd backend
+   ```
+2. Create and activate venv (Windows):
+   ```bash
+   python -m venv .venv
+   .venv\Scripts\activate
+   ```
+3. Install backend dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+4. Run API:
+   ```bash
+   uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+   ```
+5. Health check:
+   - `GET http://127.0.0.1:8000/health`
+
+## Sample Tickers
 - RELIANCE
 - TCS
 - INFY
@@ -61,48 +79,6 @@ Recruiters can evaluate this project for:
 - ICICIBANK
 - SBIN
 
-## Core Features
-- Premium hero and control panel
-- Candlestick chart with SMA 20 / SMA 50 overlays
-- Historical close chart with trend context
-- Volume chart
-- Key stats: close, day change, volatility, volume, trend
-- Educational stock price projection with upper/lower bands
-- Learning cards (time series, trend, volatility, moving averages, prediction, LSTM)
-- Recruiter notes section highlighting engineering decisions
-- Clear disclaimer that predictions are educational and not investment advice
-
-## Limitations
-- Educational projection logic is heuristic (not a trained ML model)
-- No backend persistence or user auth
-- No intraday timeframe support in this version
-- API rate limits depend on Twelve Data plan
-- Prediction dates advance by calendar days (not exchange trading calendar)
-
-## Future Roadmap
-- Backend service for model versioning and caching
-- Python-based LSTM/Transformer experimentation pipeline
-- Scenario testing (bull/base/bear regimes)
-- Watchlists, saved analyses, and portfolio overlays
-- Trading-calendar-aware projection timeline
-- Enhanced accessibility + keyboard chart controls
-
-## Folder Structure
-```
-stock-price-predictor/
-├─ src/
-│  ├─ components/
-│  ├─ services/
-│  ├─ utils/
-│  ├─ App.jsx
-│  ├─ main.jsx
-│  └─ index.css
-├─ .env.example
-├─ index.html
-├─ package.json
-├─ tailwind.config.js
-├─ postcss.config.js
-└─ vite.config.js
-```
-
-Stock Price Predictor is intentionally crafted to be extension-ready for future backend and ML integrations while still being production-presentable as a frontend portfolio piece.
+## Notes
+- Forecast output is for educational/demo purposes, not investment advice.
+- No database is required for this version.

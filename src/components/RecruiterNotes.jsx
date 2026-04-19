@@ -1,11 +1,14 @@
 const points = [
-  'Real Twelve Data API integration for NSE equities using XNSE exchange context.',
+  'Real EODHD API integration for NSE equities with client-side quota tracking.',
   'Market data normalization pipeline from raw OHLCV response to chart-ready datasets.',
+  'Production-style Python forecasting microservice using FastAPI, pandas, and scikit-learn.',
+  'Automatic synthetic-data fallback keeps analysis charts usable when free API quota is exhausted.',
   'Interactive Plotly visualizations for candlesticks, trend lines, volume, and projections.',
   'Indicator engineering in JavaScript: SMA 20/50, daily returns, annualized rolling volatility, trend signal.',
+  'Model evaluation surfaced in UI with MAE, RMSE, and MAPE for transparent teaching-first prediction quality.',
   'Teaching-first UX with transparent language and premium dashboard presentation quality.',
-  'Honest modeling posture: educational forecasting only, no false deep-learning claims.',
-  'Clean architecture ready for future backend, Python services, and real LSTM/ML experimentation.'
+  'Honest modeling posture: model outputs are educational and explicitly marked as non-advisory.',
+  'Clean architecture with backend-ready boundaries for future model versioning and advanced ML experimentation.'
 ];
 
 function RecruiterNotes() {

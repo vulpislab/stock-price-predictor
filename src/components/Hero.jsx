@@ -1,4 +1,4 @@
-const badges = ['React', 'TailwindCSS', 'JavaScript', 'Real API Data', 'Time Series Learning'];
+const badges = ['React', 'TailwindCSS', 'JavaScript', 'Python FastAPI', 'Real API Data', 'Time Series Learning'];
 
 function Hero() {
   return (
@@ -10,10 +10,16 @@ function Hero() {
         <h1 className="text-4xl font-bold leading-tight text-white md:text-5xl">
           Stock Price Predictor
         </h1>
-        <p className="text-base text-slate-200 md:text-lg">
-          A recruiter-facing, teaching-first analytics app that turns raw NSE stock data into meaningful charts,
-          trends, and an educational forward projection with honest modeling boundaries.
-        </p>
+        <div className="space-y-3 text-base text-slate-200 md:text-lg">
+          <p>
+            <span className="font-semibold text-cyan-200">Problem Statement:</span> People who are new to stock markets
+            often see raw price data but cannot easily understand trend, risk, or possible next movement.
+          </p>
+          <p>
+            <span className="font-semibold text-cyan-200">What This App Does:</span> It converts NSE stock data into
+            simple charts, clear signals, and a Python-based price forecast with accuracy scores shown in plain view.
+          </p>
+        </div>
         <div className="flex flex-wrap gap-2">
           {badges.map((badge) => (
             <span
