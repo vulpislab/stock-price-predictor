@@ -245,8 +245,8 @@ def forecast_prices(request: ForecastRequest) -> ForecastResponse:
     y_train, y_test = y[:-test_size], y[-test_size:]
 
     model = RandomForestRegressor(
-        n_estimators=320,
-        max_depth=12,
+        n_estimators=180,
+        max_depth=10,
         min_samples_leaf=2,
         random_state=42,
         n_jobs=1,

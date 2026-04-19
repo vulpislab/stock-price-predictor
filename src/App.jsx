@@ -272,11 +272,19 @@ function App() {
             />
             <StatCard
               label="Prediction Engine"
-              value={analytics.projectionSource === 'python' ? 'Python ML model' : 'Heuristic fallback'}
+              value={
+                forecastState.loading
+                  ? 'Python model loading'
+                  : analytics.projectionSource === 'python'
+                    ? 'Python ML model'
+                    : 'Heuristic fallback'
+              }
               hint={
-                analytics.projectionSource === 'python'
-                  ? `Model: ${forecastState.modelName || 'RandomForestRegressor'}`
-                  : 'Using client-side projection because Python API is unavailable.'
+                forecastState.loading
+                  ? 'Generating fresh forecast from backend model. This can take a few seconds.'
+                  : analytics.projectionSource === 'python'
+                    ? `Model: ${forecastState.modelName || 'RandomForestRegressor'}`
+                    : 'Using client-side projection because Python API is unavailable.'
               }
             />
             <StatCard label="Latest Close" value={formatCurrency(analytics.latestClose)} />
