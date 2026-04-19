@@ -1,0 +1,186 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  color: #e2e8f0;
+  background-color: #070b16;
+}
+
+* {
+  scrollbar-color: #334155 #0f172a;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: #070b16;
+}
+
+.glass-panel {
+  @apply bg-panel/75 backdrop-blur-xl border border-slate-700/60 rounded-2xl shadow-card;
+}
+
+.section-heading {
+  @apply text-xl md:text-2xl font-semibold tracking-tight text-slate-50;
+}
+
+.section-subtext {
+  @apply text-sm md:text-base text-slate-300;
+}
+
+.arch-flow-track {
+  position: relative;
+}
+
+.arch-node {
+  position: relative;
+  border: 1px solid rgba(100, 116, 139, 0.6);
+  border-radius: 0.9rem;
+  background: rgba(15, 23, 42, 0.7);
+  padding: 1rem;
+  text-align: left;
+  transition: transform 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
+}
+
+.arch-node:hover {
+  border-color: rgba(34, 211, 238, 0.55);
+}
+
+.arch-node-active {
+  border-color: rgba(251, 191, 36, 0.85);
+  background:
+    linear-gradient(140deg, rgba(12, 20, 36, 0.94), rgba(29, 52, 85, 0.9)),
+    radial-gradient(circle at 12% 15%, rgba(250, 204, 21, 0.2), transparent 48%);
+  box-shadow:
+    0 16px 34px rgba(3, 105, 161, 0.28),
+    0 0 0 1px rgba(251, 191, 36, 0.24);
+  transform: translateY(-3px);
+  animation: archNodeHighlight 680ms ease-out;
+}
+
+.arch-node-active p:first-of-type {
+  color: #f8fafc;
+}
+
+.arch-node-active p:last-of-type {
+  color: #fde68a;
+}
+
+.arch-node-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 1.8rem;
+  width: 1.8rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.65);
+  color: #cbd5e1;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.arch-node-index-active {
+  border-color: rgba(251, 191, 36, 0.95);
+  color: #fef3c7;
+  background: rgba(146, 64, 14, 0.35);
+  box-shadow:
+    0 0 0 8px rgba(251, 191, 36, 0.12),
+    0 0 18px rgba(251, 191, 36, 0.4);
+}
+
+@media (min-width: 768px) {
+  .arch-flow-track::before {
+    content: '';
+    position: absolute;
+    left: 8%;
+    right: 8%;
+    top: 50%;
+    height: 1px;
+    background: rgba(51, 65, 85, 0.8);
+    z-index: 0;
+  }
+
+  .arch-flow-track::after {
+    content: '';
+    position: absolute;
+    left: 8%;
+    right: 8%;
+    top: 50%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(34, 211, 238, 0.85), transparent);
+    background-size: 200% 100%;
+    animation: archFlowPulse 2.3s linear infinite;
+    z-index: 0;
+  }
+
+  .arch-flow-track > * {
+    z-index: 1;
+  }
+}
+
+.arch-detail-enter {
+  animation: archDetailFade 260ms ease-out;
+}
+
+.arch-benefits-panel {
+  border: 1px solid rgba(251, 191, 36, 0.5);
+  background:
+    radial-gradient(circle at 10% 0%, rgba(251, 191, 36, 0.2), transparent 42%),
+    radial-gradient(circle at 90% 100%, rgba(34, 211, 238, 0.16), transparent 38%),
+    linear-gradient(140deg, rgba(22, 24, 52, 0.9), rgba(10, 20, 36, 0.95));
+  box-shadow:
+    0 16px 34px rgba(2, 6, 23, 0.42),
+    0 0 0 1px rgba(251, 191, 36, 0.14);
+}
+
+.arch-benefit-card {
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  background: linear-gradient(140deg, rgba(15, 23, 42, 0.74), rgba(30, 41, 59, 0.64));
+  transition: transform 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
+}
+
+.arch-benefit-card:hover {
+  border-color: rgba(34, 211, 238, 0.62);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(34, 211, 238, 0.15);
+}
+
+@keyframes archFlowPulse {
+  0% {
+    background-position: 180% 0;
+  }
+  100% {
+    background-position: -20% 0;
+  }
+}
+
+@keyframes archDetailFade {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes archNodeHighlight {
+  0% {
+    border-color: rgba(34, 211, 238, 0.8);
+    box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.4);
+  }
+  55% {
+    box-shadow:
+      0 16px 34px rgba(3, 105, 161, 0.28),
+      0 0 0 6px rgba(251, 191, 36, 0.17);
+  }
+  100% {
+    border-color: rgba(251, 191, 36, 0.85);
+    box-shadow:
+      0 16px 34px rgba(3, 105, 161, 0.28),
+      0 0 0 1px rgba(251, 191, 36, 0.24);
+  }
+}
